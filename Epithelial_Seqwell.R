@@ -1,4 +1,4 @@
-library(Seurat)
+library(Seurat) 
 library(cowplot)
 library(dplyr)
 library(ggplot2)
@@ -11,35 +11,23 @@ library(SingleCellExperiment)
 library(jjb)
 
 theme_set(theme_cowplot())
-setwd("/Users/hsong/Desktop/Bladder_2023/")
+setwd("/Users/hsong/Desktop/Bladder_2023/Epithelial/")
 
-###Omit the section where we merge all the dge matrices together.
-dge<-readRDS("./dge_mergedall_032123.rds")
+###Load in the final object
+dge<-readRDS("../Bladder_all_Final.rds")
+cells_endo<-colnames(dge)[dge$Final_ID=="Endothelial"]
+cells_bcell<-colnames(dge)[dge$Final_ID=="Bcell"]
+cells_fibro<-colnames(dge)[dge$Final_ID=="Fibroblast"]
+cells_sm<-colnames(dge)[dge$Final_ID=="Smooth_Muscle"]
+cells_mast<-colnames(dge)[dge$Final_ID=="Mast_Cell"]
+cells_myeloid<-colnames(dge)[dge$Final_ID=="Myeloid"]
+cells_neutrophil<-colnames(dge)[dge$Final_ID=="Neutrophil"]
+cells_plasma<-colnames(dge)[dge$Final_ID=="Plasma"]
+cells_tcell<-colnames(dge)[dge$Final_ID=="T-cell"]
 
-sce <- SingleCellExperiment(list(counts = dge@assays$RNA@counts))
-sce <- decontX(sce)
-sce_count<-decontXcounts(sce)
-dge<- CreateSeuratObject(counts = sce_count,project = "Bladder_Final", min.cells = 0,min.features = 0,meta.data = dge@meta.data)
-
-dge$Name="Unknown"
-dge$Name[dge$patient %in% c("21217_N", "21217_T")]="VAR11"
-dge$Name[dge$patient %in% c("21222_N", "21222_T")]="VAR1"
-dge$Name[dge$patient %in% c("21226_N", "21226_T")]="VAR7"
-dge$Name[dge$patient %in% c("21262_T")]="VAR9"
-dge$Name[dge$patient %in% c("FG_CIS","FG_N","FG_T")]="VAR5"
-dge$Name[dge$patient %in% c("HG_T")]="UC3"
-dge$Name[dge$patient %in% c("20847_T")]="VAR6"
-dge$Name[dge$patient %in% c("21032_N","21032_T")]="VAR12"
-dge$Name[dge$patient %in% c("JM_T","JMx_N")]="VAR3"
-dge$Name[dge$patient %in% c("PG_SN","PG_MT","PG_ST")]="PG"
-dge$Name[dge$patient %in% c("PS_T")]="VAR2"
-dge$Name[dge$patient %in% c("11734")]="VAR8"
-dge$Name[dge$patient %in% c("12041")]="VAR4"
-dge$Name[dge$patient %in% c("12050_N","12050_T")]="VAR10"
-dge$Name[dge$patient %in% c("12923")]="UC1"
-dge$Name[dge$patient %in% c("SG")]="UC2"
-
-dge<-subset(dge,cells=colnames(dge)[!(dge$patient=="RC_N")])
+cells_epithelial<-colnames(Epithelial)
+### subset only the epithelial cells
+dge <- subset(dge,cells = cells_epithelial)
 dge <- NormalizeData(object = dge, normalization.method = "LogNormalize", scale.factor = 10000)
 dge <- FindVariableFeatures(object = dge, selection.method = "vst", nfeatures =3000)
 
@@ -152,45 +140,28 @@ DotPlot(dge, features = rev(unique(top10$gene)), cols = "RdBu")+
   theme(axis.text.x = element_text( angle = 90, vjust = 0.5, hjust = 1))
 ggsave(file="Dotplot_10_bytype.pdf",width = 16,height = 6)
 
-Featurename<-c("BE","Endothelial","Fib","SM","Tcell","Myeloid","Neutrophil","Mast_cell")
-Features<-list()
-Features[[1]] <- read.table("~/Desktop/Seqwell_combined/TCGA/BE_Markers.txt",sep="\n",header = F)[[1]]
-Features[[2]]<-read.table("~/Desktop/Seqwell_combined/TCGA/Endothelial_Markers.txt",sep="\n",header = F)[[1]]
-Features[[3]]<-read.table("~/Desktop/Seqwell_combined/TCGA/Fibroblast_Markers.txt",sep="\n",header = F)[[1]]
-Features[[4]]<-read.table("~/Desktop/Seqwell_combined/TCGA/Smooth_muscle_Markers.txt",sep="\n",header = F)[[1]]
-Features[[5]]<-read.table("~/Desktop/Seqwell_combined/TCGA/T-cell_Markers.txt",sep="\n",header = F)[[1]]
-Features[[6]]<-read.table("~/Desktop/Seqwell_combined/TCGA/Myeloid_Markers.txt",sep="\n",header = F)[[1]]
-Features[[7]]<-c("FCGR3B","IL8","FPR1","TNFAIP6","TREM1")
-Features[[8]]<-c("CPA3","KIT","MS4A2","TPSAB1")
 
-for (i in 1:length(Features)) {
-  gene.set <- Features[[i]][1:length(Features[[i]])]
-  dge <- AddModuleScore(object = dge, features = list(gene.set), ctrl = 2, name = Featurename[i])
-  V1<-as.vector(FetchData(object = dge,vars = paste0(Featurename[i],"1")))
-  FeaturePlot(dge,features=paste0(c(Featurename[i]),"1"))+scale_color_gradientn( colours = c("blue","green","yellow","red"),  limits = c(0, max(unlist(V1))))
-  ggsave(file=paste0("Featureplot_",Featurename[i],".pdf"),width = 8,height = 8)
-  BOX_df<-NULL
-  BOX_df$id<-dge@active.ident
-  BOX_df$value<-as.vector(V1)
-  BOX_df<-data.frame(BOX_df)
-  colnames(BOX_df)<-c("id","value")
-  ggplot(BOX_df, aes(id,value,fill=id)) + geom_boxplot() + #geom_violin() +#geom_jitter(shape=16,position = position_jitter(0.1))+
-    stat_summary(fun=mean,geom="point",size=3,colour="blue",shape=95)+ theme(legend.position="none",text = element_text(size=6))+
-    stat_compare_means(method = "anova",label.x = 3,label.y = max(unlist(V1))+0.05)+
-    ggtitle(Featurename[i])+rotate_x_text(angle = 45)
-  ggsave(file=paste0("Vlnplot_",Featurename[i],".pdf"),width = 10,height = 5)
-  
-}
+####Sankey diagram
+library(networkD3)
 
-###Remove paired normal
-dge$Final_ID[dge$seurat_clusters %in% c("18")]="Plasma"
-dge$Final_ID[dge$seurat_clusters %in% c("25")]="Bcell"
-dge$Final_ID[dge$seurat_clusters %in% c("33")]="Myeloid"
-unique(dge$patient)
-dge<-subset(dge,cells=colnames(dge)[!dge$patient %in% c("21217_N","21222_N","21226_N","FG_N","21032_N","JMx_N","PG_SN","12050_N")])
-table(dge$Name,dge$Final_ID)
+nodes=data.frame("name" = c(unique(dge$Name2),unique(dge$Name)))
 
-unique(dge$toptier_annotation)
-DimPlot(dge,group.by = "toptier_annotation")
+dfr<-as.data.frame(table(dge$Name2,dge$Name))
+names(dfr)<-c("source","target","value")
+
+## create a dataframe with 10 nodes
+nodes=unique(c(as.character(dfr$source), as.character(dfr$target)))
+dfr_link <- data.frame(source=as.numeric(factor(dfr$source, levels=nodes))-1, target=as.numeric(factor(dfr$target, levels=nodes))-1, value=dfr$value)
+nodes=as.data.frame(nodes)
+colnames(nodes)="name"
+p = sankeyNetwork(Links = dfr_link, Nodes = nodes,
+                  Source = "source", Target = "target",
+                  Value = "value", NodeID = "name",
+                  fontSize = 16, nodeWidth = 40)
+p
+
+
+
+
 
 
