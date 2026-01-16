@@ -29,17 +29,15 @@ dge$Name[dge$patient %in% c("21262_T")]="VAR9"
 dge$Name[dge$patient %in% c("FG_CIS","FG_N","FG_T")]="VAR5"
 dge$Name[dge$patient %in% c("HG_T")]="UC3"
 dge$Name[dge$patient %in% c("20847_T")]="VAR6"
-dge$Name[dge$patient %in% c("21032_N","21032_T")]="VAR12"
 dge$Name[dge$patient %in% c("JM_T","JMx_N")]="VAR3"
 dge$Name[dge$patient %in% c("PG_SN","PG_MT","PG_ST")]="PG"
 dge$Name[dge$patient %in% c("PS_T")]="VAR2"
 dge$Name[dge$patient %in% c("11734")]="VAR8"
 dge$Name[dge$patient %in% c("12041")]="VAR4"
 dge$Name[dge$patient %in% c("12050_N","12050_T")]="VAR10"
-dge$Name[dge$patient %in% c("12923")]="UC1"
+dge$Name[dge$patient %in% c("12049")]="UC1"
 dge$Name[dge$patient %in% c("SG")]="UC2"
 
-dge<-subset(dge,cells=colnames(dge)[!(dge$patient=="RC_N")])
 dge <- NormalizeData(object = dge, normalization.method = "LogNormalize", scale.factor = 10000)
 dge <- FindVariableFeatures(object = dge, selection.method = "vst", nfeatures =3000)
 
